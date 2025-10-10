@@ -12,6 +12,9 @@ from helpers.task4b_helper import Task4BHelper
 from helpers.task5_helper import Task5Helper
 from helpers.task6_helper import Task6Helper
 from helpers.task8_helper import Task8Helper
+from helpers.task9_helper import Task9Helper
+from helpers.task10_helper import Task10Helper
+
 
 class TaskRunner:
     def __init__(self, sql_folder="sql_tasks"):
@@ -59,13 +62,22 @@ class TaskRunner:
         print("\n==== Running Task 7 ====")
        # self.runner.run_sql("task7_invalid_trips.sql")
 
-
-
         # Task 8
-        print("\n==== Running Task 8 ====")
         print("\n==== Running Task 8 ====")
         task8 = Task8Helper(self.runner.cursor, self.db)
         task8.run_task8(limit_pairs=2000)
+
+        # Task 9
+        print("\n==== Running Task 9 ====")
+        task9 = Task9Helper(self.db.cursor)
+        task9.run_task9()
+
+        # Task 10
+        print("\n==== Running Task 10 ====")
+        task10 = Task10Helper(self.db.cursor)
+        task10.run_task10()
+
+
 
         print("\n=== All tasks executed successfully ===")
 

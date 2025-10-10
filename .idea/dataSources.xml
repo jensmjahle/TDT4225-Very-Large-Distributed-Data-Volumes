@@ -8,5 +8,12 @@
       <jdbc-url>jdbc:mysql://100.98.158.19:3306/appdb</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="db@100.98.158.19" uuid="458be6ae-8a6d-4fba-8314-c0f5aff55f2c">
+      <driver-ref>mysql.8</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://100.98.158.19:3308/db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>

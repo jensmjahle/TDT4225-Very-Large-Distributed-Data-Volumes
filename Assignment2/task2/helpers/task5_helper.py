@@ -33,7 +33,6 @@ class Task5Helper:
             return pd.DataFrame()
 
     def _compute_taxi_stats(self, df):
-        """Compute total hours and distance driven per taxi."""
         if df.empty:
             print("No data to process.")
             return pd.DataFrame()
@@ -46,13 +45,11 @@ class Task5Helper:
         for _, row in df.iterrows():
             taxi_id, trip_id, seq, lat, lon = row
             if trip_id != prev_trip:
-                # New trip → reset last point
                 prev_trip = trip_id
                 prev_point = (lat, lon)
                 prev_taxi = taxi_id
                 continue
 
-            # Compute Haversine distance between consecutive points
             dist = haversine(prev_point[0], prev_point[1], lat, lon)
             taxi_stats[taxi_id]["distance_km"] += dist
             # 15 seconds between points → 15 / 3600 = 0.0041667 hours

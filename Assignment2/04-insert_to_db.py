@@ -127,7 +127,7 @@ def normalize_trip_id(trip_id):
         return str(trip_id)
 
 try:
-    chunk_size = 100000  # keep original chunk size
+    chunk_size = 50000  # keep original chunk size
     total_inserted = 0
 
     for chunk in pd.read_csv(points_file, chunksize=chunk_size):

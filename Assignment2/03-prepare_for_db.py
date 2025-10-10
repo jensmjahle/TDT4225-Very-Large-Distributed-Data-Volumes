@@ -41,7 +41,7 @@ trip_df.columns = [
 ]
 
 trip_df.to_csv("trips_clean.csv", index=False)
-print(f"✅ Saved Trip table: trips_clean.csv ({trip_df.shape[0]} rows)")
+print(f"Saved Trip table: trips_clean.csv ({trip_df.shape[0]} rows)")
 
 # ------------------------------------------------------------
 # Step 3. Prepare Point table (stream to disk)
