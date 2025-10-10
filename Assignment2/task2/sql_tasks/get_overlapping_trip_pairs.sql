@@ -17,5 +17,4 @@ FROM trip_a AS a
 JOIN trip_b AS b
     ON a.taxi_id <> b.taxi_id
    AND a.start_time <= b.end_time
-   AND a.end_time >= b.start_time
-LIMIT 5000;
+   AND a.end_time >= b.start_time;
