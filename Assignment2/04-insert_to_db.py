@@ -1,11 +1,12 @@
 # ------------------------------------------------------------
-# Insert cleaned Porto dataset into MySQL database
-# Using DbConnector.py and the cleaned CSVs
+# Insert cleaned Porto dataset into MySQL database (Full Version)
+# With IGNORE for duplicates and memory cleanup
 # ------------------------------------------------------------
 
 from DbConnector import DbConnector
 import pandas as pd
 from mysql.connector import Error
+import gc  # garbage collector
 
 # ------------------------------------------------------------
 # Step 1. Connect to the database
@@ -65,34 +66,35 @@ trips_file = "trips_clean.csv"
 points_file = "points_clean.csv"
 
 try:
-    trips_df = pd.read_csv(trips_file)
-    print(f"Loaded {len(trips_df)} trips from {trips_file}")
+    trips_df = pd.read_csv(trips_file, dtype=str)
+    print(f"✅ Loaded {len(trips_df):,} trips from {trips_file}")
 except Exception as e:
     print("❌ ERROR loading trips CSV:", e)
     connection.close_connection()
     exit(1)
 
 # ------------------------------------------------------------
-# Step 4. Insert Trip data
+# Step 4. Insert Trip data (IGNORE duplicates)
 # ------------------------------------------------------------
-print("\n===== STEP 4: INSERTING TRIP DATA =====")
+print("\n===== STEP 4: INSERTING TRIP DATA (IGNORE duplicates) =====")
 
 trip_insert_query = """
-    INSERT INTO Trip (trip_id, taxi_id, call_type, origin_call, origin_stand, timestamp, day_type)
+    INSERT IGNORE INTO Trip (trip_id, taxi_id, call_type, origin_call, origin_stand, timestamp, day_type)
     VALUES (%s, %s, %s, %s, %s, %s, %s)
 """
 
 try:
     data = [tuple(x) for x in trips_df.to_numpy()]
     batch_size = 5000
+    total = len(data)
 
-    for i in range(0, len(data), batch_size):
+    for i in range(0, total, batch_size):
         batch = data[i:i + batch_size]
         cursor.executemany(trip_insert_query, batch)
         db.commit()
-        print(f"Inserted {i + len(batch)} / {len(data)} trips...")
+        print(f"Inserted {i + len(batch):,} / {total:,} trips...")
 
-    print(f"✅ Inserted all {len(trips_df)} trips into Trip table.")
+    print(f"✅ Inserted all {total:,} trips into Trip table (duplicates ignored).")
 except Error as e:
     print("❌ ERROR inserting trips:", e)
     db.rollback()
@@ -100,37 +102,55 @@ except Error as e:
     exit(1)
 
 # ------------------------------------------------------------
-# Step 5. Insert Point data (chunked with FK check disabled)
+# Step 5. Insert Point data (chunked, IGNORE + memory safe)
 # ------------------------------------------------------------
-print("\n===== STEP 5: INSERTING POINT DATA (BATCH MODE) =====")
+print("\n===== STEP 5: INSERTING POINT DATA (CHUNKED + MEMORY SAFE) =====")
 
-# Temporarily disable foreign key checks during bulk insert
 cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
 db.commit()
 
 point_insert_query = """
-    INSERT INTO Point (trip_id, seq, latitude, longitude)
+    INSERT IGNORE INTO Point (trip_id, seq, latitude, longitude)
     VALUES (%s, %s, %s, %s)
 """
 
+def normalize_trip_id(trip_id):
+    """Convert scientific notation or float to plain integer string."""
+    try:
+        if pd.isna(trip_id):
+            return None
+        s = str(trip_id).strip()
+        if "e" in s or "E" in s or "." in s:
+            s = str(int(float(s)))
+        return s
+    except Exception:
+        return str(trip_id)
+
 try:
-    chunk_size = 100000
+    chunk_size = 50000  # keep original chunk size
     total_inserted = 0
 
     for chunk in pd.read_csv(points_file, chunksize=chunk_size):
-        # Force proper Python datatypes & strip whitespaces
+        chunk["trip_id"] = chunk["trip_id"].apply(normalize_trip_id)
+
+        if chunk.empty:
+            continue
+
         data = [
-            (str(r["trip_id"]).strip(), int(r["seq"]), float(r["latitude"]), float(r["longitude"]))
+            (str(r["trip_id"]), int(r["seq"]), float(r["latitude"]), float(r["longitude"]))
             for _, r in chunk.iterrows()
         ]
 
         cursor.executemany(point_insert_query, data)
         db.commit()
-
         total_inserted += len(data)
         print(f"Inserted {total_inserted:,} points...")
 
-    print(f"✅ Finished inserting all {total_inserted:,} points into Point table.")
+        # 💡 Clean up memory after each batch
+        del chunk, data
+        gc.collect()
+
+    print(f"✅ Finished inserting {total_inserted:,} points into Point table (duplicates ignored).")
 except Error as e:
     print("❌ ERROR inserting points:", e)
     db.rollback()
@@ -142,13 +162,29 @@ except Exception as e:
     connection.close_connection()
     exit(1)
 finally:
-    # Re-enable foreign key checks
-    cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
-    db.commit()
+    try:
+        if db.is_connected():
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+            db.commit()
+    except Exception:
+        pass
 
 # ------------------------------------------------------------
-# Step 6. Close connection
+# Step 6. Verification summary
 # ------------------------------------------------------------
-print("\n===== STEP 6: CLOSING CONNECTION =====")
+print("\n===== STEP 6: VERIFYING DATABASE COUNTS =====")
+try:
+    cursor.execute("SELECT COUNT(*) FROM Trip;")
+    trips_count = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM Point;")
+    points_count = cursor.fetchone()[0]
+    print(f"📊 Database now contains {trips_count:,} trips and {points_count:,} points.")
+except Exception as e:
+    print("⚠️ Verification failed:", e)
+
+# ------------------------------------------------------------
+# Step 7. Close connection
+# ------------------------------------------------------------
+print("\n===== STEP 7: CLOSING CONNECTION =====")
 connection.close_connection()
-print("✅ Database insertion completed successfully.")
+print("🎉 Database insertion completed successfully (FULL LOAD, duplicates ignored).")

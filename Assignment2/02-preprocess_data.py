@@ -57,7 +57,7 @@ print(f"Removed {removed_ct} rows that violated CALL_TYPE rules.")
 print(f"Remaining trips: {len(df)}")
 
 # ------------------------------------------------------------
-# Step 5. Parse POLYLINE safely (with progress tracker)
+# Step 5. Parse POLYLINE safely
 # Parse the POLYLINE string into a list of [lon, lat] pairs.
 # ------------------------------------------------------------
 print("\n===== STEP 5: PARSING POLYLINE =====")
@@ -74,7 +74,7 @@ def parse_polyline(polyline_str):
 
 polylines = []
 n = len(df)
-progress_intervals = 10  # prints every 10%
+progress_intervals = 10
 checkpoint = n // progress_intervals if n >= progress_intervals else 1
 
 for i, polyline_str in enumerate(df["POLYLINE"]):
@@ -129,7 +129,7 @@ print("Converted TIMESTAMP column to DATETIME.")
 print("\n===== STEP 9: SAVE PREPROCESSED DATA =====")
 output_file = "porto_preprocessed.csv"
 df.to_csv(output_file, index=False)
-print(f"✅ Saved preprocessed dataset to '{output_file}'")
+print(f"Saved preprocessed dataset to '{output_file}'")
 print(f"Final shape: {df.shape}")
 
 print("\n=== PREPROCESSING COMPLETED SUCCESSFULLY ===")
