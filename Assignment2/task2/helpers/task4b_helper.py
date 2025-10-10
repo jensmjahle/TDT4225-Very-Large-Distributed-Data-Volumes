@@ -43,7 +43,7 @@ class Task4BHelper:
     def _compute_avg_distance(self, rows, silent=True):
         if rows is None or len(rows) == 0:
             if not silent:
-                print("⚠️ No data available to compute distances.")
+                print("No data available to compute distances.")
             return pd.DataFrame(columns=["call_type", "avg_distance_km"])
 
         distances = defaultdict(list)

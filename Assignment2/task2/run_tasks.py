@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from DbConnector import DbConnector
 from helpers.sql_runner import SQLRunner
+from helpers.task4a_helper import Task4AHelper
 from helpers.task4b_helper import Task4BHelper
 from helpers.task5_helper import Task5Helper
 from helpers.task6_helper import Task6Helper
@@ -29,24 +30,25 @@ class TaskRunner:
 
         # Task 1
         print("\n==== Running Task 1 ====")
-        self.runner.run_sql("task1_counts.sql")
+        #self.runner.run_sql("task1_counts.sql")
 
         # Task 2
         print("\n==== Running Task 2 ====")
-     #   self.runner.run_sql("task2_avg_trips.sql")
+        #self.runner.run_sql("task2_avg_trips.sql")
 
         # Task 3
         print("\n==== Running Task 3 ====")
-     #   self.runner.run_sql("task3_top20_taxis.sql")
+        #self.runner.run_sql("task3_top20_taxis.sql")
 
         # Task 4a
         print("\n==== Running Task 4a ====")
-       # self.runner.run_sql("task4a_calltype_per_taxi.sql")
+        #task4a = Task4AHelper(self.runner.cursor)
+        #task4a.run_task4a()
 
         # Task 4b
         print("\n==== Running Task 4b ====")
-        # task4b = Task4BHelper(self.cursor, self.sql_folder)
-        # task4b.run_task4b()
+        #task4b = Task4BHelper(self.cursor, self.sql_folder)
+        #task4b.run_task4b()
 
         # Task 5
         print("\n==== Running Task 5 ====")
@@ -60,12 +62,12 @@ class TaskRunner:
 
         # Task 7
         print("\n==== Running Task 7 ====")
-       # self.runner.run_sql("task7_invalid_trips.sql")
+        #self.runner.run_sql("task7_invalid_trips.sql")
 
         # Task 8
         print("\n==== Running Task 8 ====")
         task8 = Task8Helper(self.runner.cursor, self.db)
-        task8.run_task8(limit_pairs=2000)
+        task8.run_task8(limit_pairs=50000, chunk_size=5000)
 
         # Task 9
         print("\n==== Running Task 9 ====")
