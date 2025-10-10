@@ -1,7 +1,4 @@
-# ------------------------------------------------------------
-# Task 8 Helper — Taxi Proximity Detection (≤5m & ≤5s)
-# Optimized for large datasets with progress tracking & chunked output
-# ------------------------------------------------------------
+
 import os
 import math
 import pandas as pd
@@ -31,7 +28,7 @@ class Task8Helper:
         if not silent:
             print(f"\nRunning {filename}...")
 
-        # Run multi-statement queries safely
+
         for result in self.cursor.execute(query, multi=True):
             try:
                 result.fetchall()
@@ -145,13 +142,13 @@ class Task8Helper:
     def run_task8(self, chunk_size=2000):
         print("\n--- TASK 8: Taxi Proximity Detection (≤5m & ≤5s) ---")
 
-        # 1️⃣ Create the staging table for trip start/end times
+        # Create the staging table for trip start/end times
         print("Creating staging table trip_times_stage...")
-        self._run_sql("create_temp_trip_times.sql", fetch=False)
-        self.db.commit()
+      #  self._run_sql("create_temp_trip_times.sql", fetch=False)
+       # self.db.commit()
         print("trip_times_stage table ready.")
 
-        # 2️⃣ Get all overlapping trip pairs
+        # Get all overlapping trip pairs
         print("Fetching overlapping trip pairs...")
         self.cursor.execute(open(os.path.join(self.sql_folder, "get_overlapping_trip_pairs.sql")).read())
         rows = self.cursor.fetchall()
@@ -164,17 +161,15 @@ class Task8Helper:
 
         print(f"Found {len(pair_df):,} overlapping trip pairs to check.")
 
-        # 3️⃣ Fetch GPS points for involved trips
         trip_ids = set(pair_df["trip_a"]) | set(pair_df["trip_b"])
         print(f"Fetching GPS points for {len(trip_ids):,} trips...")
         points_df = self._get_trip_points(trip_ids)
         print(f"Loaded {len(points_df):,} GPS points.")
 
-        # 4️⃣ Run chunked proximity check & write incrementally to file
         self._check_proximity(points_df, pair_df, chunk_size=chunk_size)
 
-        # 5️⃣ Print sample output
-        out_file = "task8_proximity_pairs.csv"
+
+        out_file = "task8_proximity_pairs_sample_from_5000_trips.csv"
         if os.path.exists(out_file):
             df = pd.read_csv(out_file)
             print("\nTop 20 results (preview):")

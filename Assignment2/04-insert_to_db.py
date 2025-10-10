@@ -93,9 +93,9 @@ try:
         db.commit()
         print(f"Inserted {i + len(batch):,} / {total:,} trips...")
 
-    print(f"✅ Inserted all {total:,} trips into Trip table (duplicates ignored).")
+    print(f"Inserted all {total:,} trips into Trip table (duplicates ignored).")
 except Error as e:
-    print("❌ ERROR inserting trips:", e)
+    print("ERROR inserting trips:", e)
     db.rollback()
     connection.close_connection()
     exit(1)
@@ -114,7 +114,6 @@ point_insert_query = """
 """
 
 def normalize_trip_id(trip_id):
-    """Convert scientific notation or float to plain integer string."""
     try:
         if pd.isna(trip_id):
             return None
@@ -126,7 +125,7 @@ def normalize_trip_id(trip_id):
         return str(trip_id)
 
 try:
-    chunk_size = 50000  # keep original chunk size
+    chunk_size = 50000
     total_inserted = 0
 
     for chunk in pd.read_csv(points_file, chunksize=chunk_size):
@@ -145,18 +144,17 @@ try:
         total_inserted += len(data)
         print(f"Inserted {total_inserted:,} points...")
 
-        # 💡 Clean up memory after each batch
         del chunk, data
         gc.collect()
 
-    print(f"✅ Finished inserting {total_inserted:,} points into Point table (duplicates ignored).")
+    print(f"Finished inserting {total_inserted:,} points into Point table (duplicates ignored).")
 except Error as e:
-    print("❌ ERROR inserting points:", e)
+    print("ERROR inserting points:", e)
     db.rollback()
     connection.close_connection()
     exit(1)
 except Exception as e:
-    print("❌ Unexpected error inserting points:", e)
+    print("Unexpected error inserting points:", e)
     db.rollback()
     connection.close_connection()
     exit(1)
@@ -177,13 +175,13 @@ try:
     trips_count = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM Point;")
     points_count = cursor.fetchone()[0]
-    print(f"📊 Database now contains {trips_count:,} trips and {points_count:,} points.")
+    print(f"Database now contains {trips_count:,} trips and {points_count:,} points.")
 except Exception as e:
-    print("⚠️ Verification failed:", e)
+    print("Verification failed:", e)
 
 # ------------------------------------------------------------
 # Step 7. Close connection
 # ------------------------------------------------------------
 print("\n===== STEP 7: CLOSING CONNECTION =====")
 connection.close_connection()
-print("🎉 Database insertion completed successfully (FULL LOAD, duplicates ignored).")
+print("Database insertion completed successfully (FULL LOAD, duplicates ignored).")
