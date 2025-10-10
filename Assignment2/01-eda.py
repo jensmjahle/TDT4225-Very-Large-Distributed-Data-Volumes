@@ -307,6 +307,33 @@ plt.ylabel("Latitude")
 plt.grid(True, linestyle="--", alpha=0.5)
 plt.show()
 
+expanded_points = []
+for trip_id, poly in zip(df["TRIP_ID"], df["POLYLINE_LIST"]):
+    if isinstance(poly, list) and len(poly) > 0:
+        for lon, lat in poly:
+            expanded_points.append((trip_id, lon, lat))
+
+# Create a DataFrame for plotting
+points_df = pd.DataFrame(expanded_points, columns=["TRIP_ID", "lon", "lat"])
+
+# Plot the scatterplot
+plt.figure(figsize=(10, 8))
+sns.scatterplot(
+    data=points_df,
+    x="lon",
+    y="lat",
+    hue="TRIP_ID",
+    palette="tab20",  # use different colors for trips
+    s=10,
+    alpha=0.6,
+    legend=False  # hide legend to avoid clutter
+)
+plt.title("All Trips: GPS Points Colored by Trip ID")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.grid(True, linestyle="--", alpha=0.3)
+plt.show()
+
 plt.figure(figsize=(10, 6))
 plot_df = df[(df["distance_km"] > 0) & (df["duration_sec"] > 0)]
 
