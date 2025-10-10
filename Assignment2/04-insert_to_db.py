@@ -1,6 +1,5 @@
 # ------------------------------------------------------------
-# Insert cleaned Porto dataset into MySQL database (Full Version)
-# With IGNORE for duplicates and memory cleanup
+# Insert cleaned Porto dataset into MySQL database
 # ------------------------------------------------------------
 
 from DbConnector import DbConnector
@@ -16,9 +15,9 @@ try:
     connection = DbConnector()
     db = connection.db_connection
     cursor = connection.cursor
-    print("✅ Database connection established.")
+    print("Database connection established.")
 except Exception as e:
-    print("❌ ERROR: Could not connect to database:", e)
+    print("ERROR: Could not connect to database:", e)
     exit(1)
 
 # ------------------------------------------------------------
@@ -51,9 +50,9 @@ try:
     """)
 
     db.commit()
-    print("✅ Tables Trip and Point are ready.")
+    print("Tables Trip and Point are ready.")
 except Error as e:
-    print("❌ ERROR creating tables:", e)
+    print("ERROR creating tables:", e)
     connection.close_connection()
     exit(1)
 
@@ -67,9 +66,9 @@ points_file = "points_clean.csv"
 
 try:
     trips_df = pd.read_csv(trips_file, dtype=str)
-    print(f"✅ Loaded {len(trips_df):,} trips from {trips_file}")
+    print(f"Loaded {len(trips_df):,} trips from {trips_file}")
 except Exception as e:
-    print("❌ ERROR loading trips CSV:", e)
+    print("ERROR loading trips CSV:", e)
     connection.close_connection()
     exit(1)
 

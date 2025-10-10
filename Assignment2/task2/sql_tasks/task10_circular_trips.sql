@@ -1,6 +1,4 @@
--- ------------------------------------------------------------
--- Task 10: Find circular trips (start and end points within 50 m)
--- ------------------------------------------------------------
+
 WITH trip_points AS (
     SELECT
         p.trip_id,
@@ -13,7 +11,7 @@ trip_start_end AS (
     SELECT
         t.trip_id,
         t.taxi_id,
-        MIN(tp.latitude) AS start_lat,  -- not used directly but for clarity
+        MIN(tp.latitude) AS start_lat,
         MIN(tp.longitude) AS start_lon,
         (SELECT latitude FROM Point p2 WHERE p2.trip_id = t.trip_id ORDER BY seq ASC LIMIT 1) AS start_latitude,
         (SELECT longitude FROM Point p2 WHERE p2.trip_id = t.trip_id ORDER BY seq ASC LIMIT 1) AS start_longitude,
@@ -44,4 +42,4 @@ SELECT
 FROM trip_start_end
 HAVING distance_km <= 0.05  -- within 50 m
 ORDER BY distance_km ASC
-LIMIT 1000;
+

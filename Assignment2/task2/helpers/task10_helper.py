@@ -9,9 +9,7 @@ class Task10Helper:
         self.cursor = cursor
         self.sql_folder = sql_folder
 
-    # ------------------------------------------------------------
-    # Run SQL file and return a DataFrame
-    # ------------------------------------------------------------
+
     def _run_sql_file(self, filename):
         filepath = os.path.join(self.sql_folder, filename)
         print(f"\n===== Running {filename} =====")
@@ -33,9 +31,7 @@ class Task10Helper:
         df = pd.DataFrame(rows, columns=columns)
         return df
 
-    # ------------------------------------------------------------
-    # Main runner for Task 10
-    # ------------------------------------------------------------
+
     def run_task10(self):
         print("\n--- TASK 10: CIRCULAR TRIPS ---")
 

@@ -1,6 +1,4 @@
--- ------------------------------------------------------------
--- Task 11: Average idle time between consecutive trips per taxi
--- ------------------------------------------------------------
+
 WITH trip_end_times AS (
     SELECT
         t.trip_id,

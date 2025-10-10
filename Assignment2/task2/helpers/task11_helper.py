@@ -30,9 +30,7 @@ class Task11Helper:
 
         return pd.DataFrame(rows, columns=columns)
 
-    # ------------------------------------------------------------
-    # Main runner
-    # ------------------------------------------------------------
+
     def run_task11(self):
         print("\n--- TASK 11: AVERAGE IDLE TIME PER TAXI ---")
 
