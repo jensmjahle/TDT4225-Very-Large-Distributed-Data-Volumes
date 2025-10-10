@@ -9,6 +9,7 @@ import numpy as np
 from collections import Counter
 import datashader as ds
 import datashader.transfer_functions as tf
+from PIL._imaging import display
 from datashader.utils import export_image
 import colorcet as cc
 import matplotlib.pyplot as plt
@@ -20,6 +21,8 @@ import ast
 import matplotlib.pyplot as plt
 import seaborn as sns
 from math import radians, sin, cos, sqrt, atan2
+from matplotlib.colors import LinearSegmentedColormap
+
 
 # ------------------------------------------------------------
 # Helper functions
@@ -59,7 +62,7 @@ print("\n===== STEP 1: LOADING THE DATASET =====")
 file_path = "porto.csv"   # Change this to your actual dataset filename
 df = pd.read_csv(file_path)
 
-print(f"✅ Dataset loaded successfully! Shape: {df.shape}")
+print(f"Dataset loaded successfully! Shape: {df.shape}")
 pretty_print(df.head(), "First 5 rows")
 
 # ------------------------------------------------------------
@@ -198,7 +201,7 @@ if "TAXI_ID" in df.columns:
     pretty_print(taxi_counts.reset_index().rename(columns={'index': 'TAXI_ID', 'TAXI_ID': 'Trips'}),
                  "Top 5 Taxis with Most Trips")
 
-for col in ["CALL_TYPE", "DAYTYPE", "MISSING_DATA"]:
+for col in ["CALL_TYPE", "DAY_TYPE", "MISSING_DATA"]:
     if col in df.columns:
         pretty_print(df[col].value_counts().reset_index().rename(columns={'index': col, col: 'Count'}),
                      f"Distribution of {col}")
@@ -209,7 +212,12 @@ print("\n=== EDA COMPLETED SUCCESSFULLY ===")
 # ------------------------------------------------------------
 # Step 7: Parse POLYLINE only once
 # ------------------------------------------------------------
-print("\n===== STEP 2: PARSING POLYLINES =====")
+
+
+#df = pd.read_pickle("parsed.pkl")
+
+
+print("\n===== STEP 7: PARSING POLYLINES =====")
 start_time = time.time()
 parsed_polylines = []
 n = len(df)
@@ -228,6 +236,8 @@ for i, polyline_str in enumerate(df["POLYLINE"]):
         print(f"Parsing POLYLINE: {progress}% ({i+1}/{n}) | Elapsed: {elapsed:.1f}s")
 
 df["POLYLINE_LIST"] = parsed_polylines
+df.to_pickle("parsed.pkl")
+
 
 # ------------------------------------------------------------
 # Step 8: Compute Distance and Duration
@@ -243,7 +253,7 @@ def compute_trip_metrics_from_list(coords):
     duration = len(coords) * 15
     return dist, duration
 
-print("\n===== STEP 3: CALCULATING DISTANCE AND DURATION =====")
+print("\n===== STEP 8: CALCULATING DISTANCE AND DURATION =====")
 distances = []
 durations = []
 start_time = time.time()
@@ -265,6 +275,38 @@ pretty_print(df[["TRIP_ID", "distance_km", "duration_sec"]].head())
 # ------------------------------------------------------------
 # Step 9: Scatter Plot (Distance vs Duration, log-log)
 # ------------------------------------------------------------
+
+# Filter rows with missing data
+missing_df = df[df["MISSING_DATA"] == True].copy()
+
+# Expand POLYLINE_LIST into individual (lon, lat, trip_id) points
+expanded_points = []
+for trip_id, poly in zip(missing_df["TRIP_ID"], missing_df["POLYLINE_LIST"]):
+    if isinstance(poly, list) and len(poly) > 0:
+        for lon, lat in poly:
+            expanded_points.append((trip_id, lon, lat))
+
+# Create a DataFrame for plotting
+points_df = pd.DataFrame(expanded_points, columns=["TRIP_ID", "lon", "lat"])
+
+# Plot the scatterplot
+plt.figure(figsize=(10, 8))
+sns.scatterplot(
+    data=points_df,
+    x="lon",
+    y="lat",
+    hue="TRIP_ID",
+    palette="tab20",
+    s=10,
+    alpha=0.7,
+    legend=False  # hide legend if too many trips
+)
+plt.title("GPS Points for Trips with Missing Data")
+plt.xlabel("Longitude")
+plt.ylabel("Latitude")
+plt.grid(True, linestyle="--", alpha=0.5)
+plt.show()
+
 plt.figure(figsize=(10, 6))
 plot_df = df[(df["distance_km"] > 0) & (df["duration_sec"] > 0)]
 
@@ -272,17 +314,18 @@ sns.scatterplot(
     data=plot_df[plot_df["MISSING_DATA"] == False],
     x="duration_sec", y="distance_km", color="blue", alpha=0.5, s=20, label="Complete Data"
 )
-sns.scatterplot(
-    data=plot_df[plot_df["MISSING_DATA"] == True],
-    x="duration_sec", y="distance_km", color="red", alpha=0.7, s=30, label="Missing Data"
-)
+# sns.scatterplot(
+#     data=plot_df[plot_df["MISSING_DATA"] == True],
+#     x="duration_sec", y="distance_km", color="red", alpha=0.7, s=30, label="Missing Data"
+# )
 
+# Logarithmic scale
 plt.xscale("log")
 plt.yscale("log")
 plt.title("Trip Distance vs Duration (Log–Log, Missing Data Highlighted)")
 plt.xlabel("Duration (seconds, log scale)")
 plt.ylabel("Distance (km, log scale)")
-plt.legend()
+plt.legend(loc="lower right", bbox_to_anchor=(1.0, 0.0))
 plt.grid(True, which="both", linestyle="--", linewidth=0.5)
 plt.show()
 
@@ -326,7 +369,7 @@ print(f"Total GPS points (approx): {total_points:,} - time {time.time()-t0:.1f}s
 
 # 3) Create a datashader Canvas
 # choose resolution that suits you (higher = more detail, slower)
-plot_width, plot_height = 120000, 90000
+plot_width, plot_height = 24000, 18000
 cvs = ds.Canvas(plot_width=plot_width,
                 plot_height=plot_height,
                 x_range=(min_lon, max_lon),
@@ -368,26 +411,22 @@ if agg_total is None:
     raise RuntimeError("No GPS points were aggregated - check POLYLINE_LIST content")
 
 # 5) Colorize the aggregated image
-# Use eq_hist or linear, try different 'how' settings for contrast
-img = tf.shade(agg_total, cmap=cc.rainbow[::-1], how='eq_hist')  # good automatic contrast
+cmap = LinearSegmentedColormap.from_list('black_orange_yellow', ['black', 'orange', 'yellow'])
 
-# Optionally enhance to make thin routes more visible
-img2 = tf.dynspread(img, threshold=0.5, max_px=3)  # widen thin streaks a little
+# 2) Shade the aggregated data with custom colormap and histogram equalization
+img = tf.shade(agg_total, cmap=cmap, how='eq_hist')
 
-# 6) Export or show the image
-# Display inline (if using Jupyter)
-try:
-    # convert datashader Canvas to RGBA image for matplotlib
-    arr = tf.set_background(img2, "white").to_pil()
-    display(arr)   # Jupyter only; otherwise use plt.imshow below
-except Exception:
-    pass
+# 3) Spread thin routes slightly
+img2 = tf.dynspread(img, threshold=0.5, max_px=3)
 
-# Fallback: show via matplotlib
+# 4) Set black background
+img2 = tf.set_background(img2, "black")
+
+# 5) Display
 plt.figure(figsize=(10,8))
 plt.imshow(img2.to_pil())
 plt.axis('off')
-plt.title("Datashader Taxi Route Density Heatmap")
+plt.title("Datashader Taxi Route Density Heatmap (Black-Orange-Yellow)")
 plt.show()
 
 # # 7) OPTIONAL: overlay some MISSING_DATA points (sampled) on top using matplotlib
