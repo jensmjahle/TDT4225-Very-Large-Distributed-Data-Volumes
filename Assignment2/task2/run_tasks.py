@@ -34,7 +34,7 @@ class TaskRunner:
 
         # Task 2
         print("\n==== Running Task 2 ====")
-        #self.runner.run_sql("task2_avg_trips.sql")
+        self.runner.run_sql("task2_avg_trips.sql")
 
         # Task 3
         print("\n==== Running Task 3 ====")
@@ -47,13 +47,14 @@ class TaskRunner:
 
         # Task 4b
         print("\n==== Running Task 4b ====")
-        task4b = Task4BHelper(self.cursor, self.sql_folder)
-        task4b.run_task4b()
+        #task4b = Task4BHelper(self.cursor, self.sql_folder)
+        #task4b.run_task4b()
 
         # Task 5
         print("\n==== Running Task 5 ====")
-        #task5 = Task5Helper(self.runner.cursor)
-        #task5.run_task5()
+        #task5 = Task5Helper(self.cursor, self.db, self.sql_folder)
+        #task5.run_task5(chunk_size=50)
+
 
         # Task 6
         print("\n==== Running Task 6 ====")
@@ -71,7 +72,7 @@ class TaskRunner:
 
         # Task 9
         print("\n==== Running Task 9 ====")
-        #task9 = Task9Helper(self.db.cursor)
+        #task9 = Task9Helper(self.db.cursor(), self.sql_folder)
         #task9.run_task9()
 
         # Task 10

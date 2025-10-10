@@ -1,7 +1,7 @@
 
 import os
+import time
 import pandas as pd
-from collections import defaultdict
 from tabulate import tabulate
 from helpers.haversine_helper import haversine
 
@@ -11,89 +11,94 @@ class Task4BHelper:
         self.cursor = cursor
         self.sql_folder = sql_folder
 
-    # ------------------------------------------------------------
-    # Run SQL from file and return DataFrame
-    # ------------------------------------------------------------
-    def _run_sql_file(self, filename, silent=True):
-        filepath = os.path.join(self.sql_folder, filename)
+    def _run_sql_file(self, filename, silent=False):
+        path = os.path.join(self.sql_folder, filename)
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Missing SQL file: {path}")
 
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                query = f.read().strip()
+        with open(path, "r", encoding="utf-8") as f:
+            query = f.read().strip()
 
-            self.cursor.execute(query)
-            rows = self.cursor.fetchall()
-            columns = self.cursor.column_names
-        except Exception as e:
-            if not silent:
-                print(f"Error running {filename}: {e}")
-            return pd.DataFrame(), []
+        if not silent:
+            print(f"\n===== Running {filename} =====")
 
-        if not rows or len(rows) == 0:
-            if not silent:
-                print(f"No results returned for {filename}.")
-            return pd.DataFrame(), []
+        self.cursor.execute(query)
+        rows = self.cursor.fetchall()
+        if not rows:
+            print("No results returned.")
+            return pd.DataFrame()
 
-        df = pd.DataFrame(rows, columns=columns)
-        return df, rows
+        cols = self.cursor.column_names
+        df = pd.DataFrame(rows, columns=cols)
+        print(tabulate(df, headers="keys", tablefmt="fancy_grid", showindex=False))
+        return df
 
-    # ------------------------------------------------------------
-    # Compute average distance per call_type using Haversine
-    # ------------------------------------------------------------
-    def _compute_avg_distance(self, rows, silent=True):
-        if rows is None or len(rows) == 0:
-            if not silent:
-                print("No data available to compute distances.")
-            return pd.DataFrame(columns=["call_type", "avg_distance_km"])
+    def _compute_avg_distance(self):
+        print("\n===== Computing Average Trip Distance (Streaming) =====")
+        qpath = os.path.join(self.sql_folder, "task4b3_distance_query.sql")
+        with open(qpath, "r", encoding="utf-8") as f:
+            query = f.read().strip()
 
-        distances = defaultdict(list)
+        self.cursor.execute(query)
+
         prev_trip, prev_point, prev_call = None, None, None
+        trip_distances = {}
+        processed = 0
+        last_log = time.time()
 
-        for row in rows:
-            call_type, trip_id, seq, lat, lon = row
+        for (call_type, trip_id, seq, lat, lon) in self.cursor:
+            processed += 1
             trip_id = str(trip_id)
 
             if trip_id != prev_trip:
                 prev_trip, prev_point, prev_call = trip_id, (lat, lon), call_type
+                if trip_id not in trip_distances:
+                    trip_distances[trip_id] = {"call_type": call_type, "dist": 0.0}
                 continue
 
             dist = haversine(prev_point[0], prev_point[1], lat, lon)
-            distances[prev_call].append(dist)
+            trip_distances[trip_id]["dist"] += dist
             prev_point = (lat, lon)
 
-        if not distances:
+            if processed % 500000 == 0 or (time.time() - last_log) > 10:
+                print(f"Processed {processed:,} GPS points...")
+                last_log = time.time()
+
+        print(f"Finished processing {processed:,} points.")
+
+        # Aggregate per call_type
+        agg = {}
+        for _, info in trip_distances.items():
+            agg.setdefault(info["call_type"], []).append(info["dist"])
+
+        if not agg:
+            print("No distances computed.")
             return pd.DataFrame(columns=["call_type", "avg_distance_km"])
 
-        result = pd.DataFrame(
-            [(ct, round(sum(v) / len(v), 3)) for ct, v in distances.items()],
-            columns=["call_type", "avg_distance_km"],
+        df = pd.DataFrame(
+            [(ct, round(sum(v) / len(v), 3)) for ct, v in agg.items()],
+            columns=["call_type", "avg_distance_km"]
         )
+        print(tabulate(df, headers="keys", tablefmt="fancy_grid", showindex=False))
+        return df
 
-        return result
 
-    # ------------------------------------------------------------
-    # Main runner for Task 4b
-    # ------------------------------------------------------------
     def run_task4b(self):
-        # Step 1: Average trip duration
-        dur_df, _ = self._run_sql_file("task4b1_avg_duration.sql", silent=True)
+        print("\n--- TASK 4b ---")
 
-        # Step 2: Time band shares
-        time_df, _ = self._run_sql_file("task4b2_time_bands.sql", silent=True)
+        dur_df = self._run_sql_file("task4b1_avg_duration.sql")
+        time_df = self._run_sql_file("task4b2_time_bands.sql")
+        dist_df = self._compute_avg_distance()
 
-        # Step 3: Distance computation (Python part)
-        _, dist_rows = self._run_sql_file("task4b3_distance_query.sql", silent=True)
-        dist_df = self._compute_avg_distance(dist_rows, silent=True)
+        print("\n===== Combined Summary Table for Task 4b =====")
 
-        # ------------------------------------------------------------
-        # Combine all into one summary table
-        # ------------------------------------------------------------
         merged = pd.DataFrame({"call_type": ["A", "B", "C"]})
         for df in [dur_df, dist_df, time_df]:
             if not df.empty:
                 merged = pd.merge(merged, df, on="call_type", how="left")
 
-        print("\n===== Combined Summary Table for Task 4b =====")
         print(tabulate(merged.fillna("N/A"), headers="keys", tablefmt="fancy_grid", showindex=False))
+        merged.to_csv("task4b_summary.csv", index=False)
+        print("Saved summary to task4b_summary.csv")
 
-        print("Task 4b completed successfully.\n")
+        print("\nTask 4b completed successfully.")

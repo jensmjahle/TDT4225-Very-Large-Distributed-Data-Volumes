@@ -20,4 +20,3 @@ SELECT
 FROM trip_durations
 WHERE start_date <> end_date
 ORDER BY start_time
-LIMIT 100;

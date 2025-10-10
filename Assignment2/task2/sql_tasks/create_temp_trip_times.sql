@@ -1,17 +1,15 @@
 -- ------------------------------------------------------------
--- TEMP TABLE: trip_id, taxi_id, start_time, end_time (cached)
+-- Create a reusable staging table for trip times
 -- ------------------------------------------------------------
 
-CREATE TEMPORARY TABLE temp_trip_times AS
+DROP TABLE IF EXISTS trip_times_stage;
+
+CREATE TABLE trip_times_stage AS
 SELECT
     t.trip_id,
     t.taxi_id,
     t.timestamp AS start_time,
-    DATE_ADD(t.timestamp, INTERVAL (MAX(p.seq) * 15) SECOND) AS end_time
-FROM Trip AS t
-JOIN Point AS p ON t.trip_id = p.trip_id
+    TIMESTAMPADD(SECOND, (MAX(p.seq) * 15), t.timestamp) AS end_time
+FROM Trip t
+JOIN Point p ON t.trip_id = p.trip_id
 GROUP BY t.trip_id, t.taxi_id, t.timestamp;
-
--- Speedup indexes
-CREATE INDEX idx_temp_trip_times_taxi_id ON temp_trip_times(taxi_id);
-CREATE INDEX idx_temp_trip_times_time ON temp_trip_times(start_time, end_time);

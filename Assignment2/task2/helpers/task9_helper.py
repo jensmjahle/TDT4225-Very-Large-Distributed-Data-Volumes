@@ -1,7 +1,4 @@
-# ------------------------------------------------------------
-# Task 9 Helper: Midnight Crossers
-# Finds trips that start one day and end the next.
-# ------------------------------------------------------------
+
 import os
 import pandas as pd
 from tabulate import tabulate
@@ -12,9 +9,7 @@ class Task9Helper:
         self.cursor = cursor
         self.sql_folder = sql_folder
 
-    # ------------------------------------------------------------
-    # Run SQL and return DataFrame
-    # ------------------------------------------------------------
+
     def _run_sql_file(self, filename):
         filepath = os.path.join(self.sql_folder, filename)
         print(f"\n===== Running {filename} =====")
@@ -36,9 +31,7 @@ class Task9Helper:
         df = pd.DataFrame(rows, columns=columns)
         return df
 
-    # ------------------------------------------------------------
-    # Main runner for Task 9
-    # ------------------------------------------------------------
+
     def run_task9(self):
         print("\n--- TASK 9: MIDNIGHT CROSSERS ---")
 
@@ -48,12 +41,10 @@ class Task9Helper:
             print("No midnight crossers found.")
             return
 
-        # Save to CSV
         output_file = "task9_midnight_crossers.csv"
         df.to_csv(output_file, index=False)
         print(f"💾 Saved results to {output_file} ({len(df)} rows).")
 
-        # Display first 20
         print("\nTop 20 Midnight Crossers:")
         print(tabulate(df.head(20), headers="keys", tablefmt="fancy_grid", showindex=False))
 

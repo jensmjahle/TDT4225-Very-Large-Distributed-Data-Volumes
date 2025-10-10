@@ -1,6 +1,4 @@
--- ------------------------------------------------------------
--- Task 6: Find candidate points near Porto City Hall
--- ------------------------------------------------------------
+
 -- Bounding box around City Hall to reduce dataset size
 -- (~0.002° ≈ 200 m margin)
 SELECT
