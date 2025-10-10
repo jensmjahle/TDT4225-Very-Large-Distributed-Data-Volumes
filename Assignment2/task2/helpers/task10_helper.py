@@ -1,7 +1,4 @@
-# ------------------------------------------------------------
-# Task 10 Helper: Circular Trips
-# Finds trips whose start and end points are within 50 m.
-# ------------------------------------------------------------
+
 import os
 import pandas as pd
 from tabulate import tabulate

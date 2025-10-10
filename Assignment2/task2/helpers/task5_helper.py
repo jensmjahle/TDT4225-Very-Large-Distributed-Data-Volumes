@@ -1,6 +1,4 @@
-# ------------------------------------------------------------
-# Task 5 Helper - Total Hours & Distance per Taxi
-# ------------------------------------------------------------
+
 import pandas as pd
 from tabulate import tabulate
 from collections import defaultdict

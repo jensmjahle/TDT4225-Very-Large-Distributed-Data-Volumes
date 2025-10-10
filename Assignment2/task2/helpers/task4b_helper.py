@@ -1,7 +1,4 @@
-# ------------------------------------------------------------
-# Task 4b Helper (TDT4225 Assignment 2)
-# Combines SQL results + Python Haversine computation
-# ------------------------------------------------------------
+
 import os
 import pandas as pd
 from collections import defaultdict
@@ -29,12 +26,12 @@ class Task4BHelper:
             columns = self.cursor.column_names
         except Exception as e:
             if not silent:
-                print(f"❌ Error running {filename}: {e}")
+                print(f"Error running {filename}: {e}")
             return pd.DataFrame(), []
 
         if not rows or len(rows) == 0:
             if not silent:
-                print(f"⚠️ No results returned for {filename}.")
+                print(f"No results returned for {filename}.")
             return pd.DataFrame(), []
 
         df = pd.DataFrame(rows, columns=columns)

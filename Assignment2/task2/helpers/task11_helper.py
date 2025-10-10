@@ -9,9 +9,7 @@ class Task11Helper:
         self.cursor = cursor
         self.sql_folder = sql_folder
 
-    # ------------------------------------------------------------
-    # Run SQL file and return results as DataFrame
-    # ------------------------------------------------------------
+
     def _run_sql_file(self, filename):
         filepath = os.path.join(self.sql_folder, filename)
         print(f"\n===== Running {filename} =====")

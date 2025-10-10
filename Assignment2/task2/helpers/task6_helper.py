@@ -1,6 +1,4 @@
-# ------------------------------------------------------------
-# Task 6 Helper - Trips passing within 100 m of Porto City Hall
-# ------------------------------------------------------------
+
 import os
 import pandas as pd
 from tabulate import tabulate
@@ -47,7 +45,6 @@ class Task6Helper:
         return result
 
     def run_task6(self):
-        print("\n--- TASK 6 ---")
         df = self._run_sql("task6_near_cityhall.sql")
         trips_df = self._filter_within_100m(df)
         trips_df.to_csv("task6_near_cityhall.csv", index=False)
