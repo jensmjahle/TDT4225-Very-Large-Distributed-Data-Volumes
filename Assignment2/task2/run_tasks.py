@@ -68,7 +68,7 @@ class TaskRunner:
         # Task 8
         print("\n==== Running Task 8 ====")
         #task8 = Task8Helper(self.runner.cursor, self.db)
-        #task8.run_task8(limit_pairs=50000, chunk_size=5000)
+        #task8.run_task8(chunk_size=5000)
 
         # Task 9
         print("\n==== Running Task 9 ====")
