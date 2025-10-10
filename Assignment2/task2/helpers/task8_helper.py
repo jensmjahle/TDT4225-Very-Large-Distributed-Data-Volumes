@@ -1,6 +1,6 @@
 # ------------------------------------------------------------
 # Task 8 Helper — Taxi Proximity Detection (5m & 5s rule)
-# Bulk-friendly with progress tracking, resumable chunks, and safe output
+# Bulk-friendly, resumable, progress-tracked version
 # ------------------------------------------------------------
 import os
 import pandas as pd
@@ -19,18 +19,31 @@ class Task8Helper:
         os.makedirs(output_dir, exist_ok=True)
 
     # ------------------------------------------------------------
-    # Run SQL from file
+    # Run SQL from file (supports multi-statement scripts)
     # ------------------------------------------------------------
     def _run_sql(self, filename, fetch=True):
         filepath = os.path.join(self.sql_folder, filename)
         with open(filepath, "r", encoding="utf-8") as f:
             query = f.read().strip()
-        self.cursor.execute(query)
-        if fetch:
-            rows = self.cursor.fetchall()
-            cols = self.cursor.column_names
-            return pd.DataFrame(rows, columns=cols)
-        return pd.DataFrame()
+
+        try:
+            # ✅ Allow multiple SQL statements in one file
+            for result in self.cursor.execute(query, multi=True):
+                pass
+
+            if fetch:
+                try:
+                    rows = self.cursor.fetchall()
+                    cols = self.cursor.column_names
+                    return pd.DataFrame(rows, columns=cols)
+                except Exception:
+                    # No results to fetch
+                    return pd.DataFrame()
+
+            return pd.DataFrame()
+        except Exception as e:
+            print(f"Error running {filename}: {e}")
+            return pd.DataFrame()
 
     # ------------------------------------------------------------
     # Fetch GPS points for a set of trip IDs
@@ -38,6 +51,7 @@ class Task8Helper:
     def _get_trip_points(self, trip_ids):
         if not trip_ids:
             return pd.DataFrame()
+
         placeholders = ",".join(["%s"] * len(trip_ids))
         query = f"""
             SELECT trip_id, seq, latitude AS lat, longitude AS lon
@@ -54,10 +68,12 @@ class Task8Helper:
     def _check_proximity_chunk(self, points_df, pair_df, start_index, end_index):
         results = []
         n_pairs = len(pair_df)
+
         for i, pair in enumerate(pair_df.itertuples(index=False), start=start_index):
             a_id, b_id = pair.trip_a, pair.trip_b
             pts_a = points_df[points_df["trip_id"] == a_id].sort_values("seq")
             pts_b = points_df[points_df["trip_id"] == b_id].sort_values("seq")
+
             if pts_a.empty or pts_b.empty:
                 continue
 
@@ -83,6 +99,7 @@ class Task8Helper:
                 if found:
                     break
 
+            # Progress feedback
             if i % 100 == 0 or i == end_index:
                 sys.stdout.write(f"\rChecked {i}/{n_pairs} pairs...")
                 sys.stdout.flush()
@@ -95,12 +112,12 @@ class Task8Helper:
     def run_task8(self, limit_pairs=50000, chunk_size=5000):
         print("\n--- TASK 8: Taxi Proximity Detection (5m & 5s) ---")
 
-        # Create temporary start/end cache
+        # 1️⃣ Create temporary start/end cache
         print("Creating temporary trip_times table...")
         self._run_sql("create_temp_trip_times.sql", fetch=False)
         self.db.commit()
 
-        # Fetch overlapping trip pairs
+        # 2️⃣ Fetch overlapping trip pairs
         sql_path = os.path.join(self.sql_folder, "get_overlapping_trip_pairs.sql")
         with open(sql_path, "r", encoding="utf-8") as f:
             query = f.read().replace("LIMIT 5000", f"LIMIT {limit_pairs}")
@@ -115,13 +132,13 @@ class Task8Helper:
 
         print(f"Found {len(pair_df):,} overlapping trip pairs needing distance checks.")
 
-        # Fetch all GPS points
+        # 3️⃣ Fetch all GPS points
         trip_ids = set(pair_df["trip_a"]) | set(pair_df["trip_b"])
         print(f"Fetching GPS points for {len(trip_ids):,} trips...")
         points_df = self._get_trip_points(trip_ids)
         print(f"Loaded {len(points_df):,} points for proximity check.")
 
-
+        # 4️⃣ Process in resumable chunks
         total_pairs = len(pair_df)
         all_files = []
         start_time = time.time()
@@ -136,7 +153,7 @@ class Task8Helper:
             chunk_file = f"task8_chunk_{start}_{end}.csv"
             chunk_path = os.path.join(self.output_dir, chunk_file)
 
-            # Skip already processed chunks
+            # ✅ Skip already processed chunks
             if chunk_file in existing_chunks:
                 print(f"Skipping already processed chunk {chunk_file}")
                 all_files.append(chunk_path)
@@ -157,13 +174,14 @@ class Task8Helper:
             progress = (end / total_pairs) * 100
             print(f"Elapsed: {elapsed:.1f}s | Progress: {progress:.1f}%")
 
-        # Combine all chunk outputs
+        # 5️⃣ Combine all chunk outputs
         combined_path = os.path.join(self.output_dir, "task8_all_close_pairs.csv")
         print("\nCombining all chunk results...")
         combined = pd.concat((pd.read_csv(f) for f in all_files), ignore_index=True)
         combined.to_csv(combined_path, index=False)
         print(f"Saved combined results → {combined_path}")
 
+        # 6️⃣ Summarize
         grouped = (
             combined.groupby(["taxi_a", "taxi_b"])
             .size()
@@ -176,5 +194,13 @@ class Task8Helper:
 
         print("\nTop 20 Taxi Pairs (Close Encounters):")
         print(tabulate(grouped.head(20), headers="keys", tablefmt="fancy_grid", showindex=False))
+
+        # 7️⃣ Cleanup temporary table
+        try:
+            self.cursor.execute("DROP TEMPORARY TABLE IF EXISTS trip_times;")
+            self.db.commit()
+            print("Temporary table trip_times dropped.")
+        except Exception:
+            print("Warning: Could not drop temporary table trip_times.")
 
         print("\nTask 8 completed successfully.")

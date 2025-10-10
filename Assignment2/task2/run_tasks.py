@@ -47,8 +47,8 @@ class TaskRunner:
 
         # Task 4b
         print("\n==== Running Task 4b ====")
-        #task4b = Task4BHelper(self.cursor, self.sql_folder)
-        #task4b.run_task4b()
+        task4b = Task4BHelper(self.cursor, self.sql_folder)
+        task4b.run_task4b()
 
         # Task 5
         print("\n==== Running Task 5 ====")
@@ -66,18 +66,18 @@ class TaskRunner:
 
         # Task 8
         print("\n==== Running Task 8 ====")
-        task8 = Task8Helper(self.runner.cursor, self.db)
-        task8.run_task8(limit_pairs=50000, chunk_size=5000)
+        #task8 = Task8Helper(self.runner.cursor, self.db)
+        #task8.run_task8(limit_pairs=50000, chunk_size=5000)
 
         # Task 9
         print("\n==== Running Task 9 ====")
-        task9 = Task9Helper(self.db.cursor)
-        task9.run_task9()
+        #task9 = Task9Helper(self.db.cursor)
+        #task9.run_task9()
 
         # Task 10
         print("\n==== Running Task 10 ====")
-        task10 = Task10Helper(self.db.cursor)
-        task10.run_task10()
+        #task10 = Task10Helper(self.db.cursor)
+        #task10.run_task10()
 
 
 
