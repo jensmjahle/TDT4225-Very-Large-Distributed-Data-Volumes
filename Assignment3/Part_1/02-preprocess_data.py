@@ -79,11 +79,6 @@ print(f"ratings: removed {before - len(ratings)} duplicates")
 # - Rename id to movie_id for clarity
 print("\n===== STEP 3: NORMALIZE IDS =====")
 
-# ------------------------------------------------------------
-# STEP 3: NORMALIZE IDS
-# ------------------------------------------------------------
-print("\n===== STEP 3: NORMALIZE IDS =====")
-
 if "id" in movies.columns:
     movies["id"] = pd.to_numeric(movies["id"], errors="coerce").astype("Int64")
     invalid = movies["id"].isna().sum()
@@ -114,6 +109,9 @@ ratings["movie_id"] = pd.to_numeric(ratings["movie_id"], errors="coerce").astype
 invalid = ratings["movie_id"].isna().sum()
 print(f"ratings: normalized 'movie_id' ({invalid} invalid IDs)")
 
+
+# ------------------------------------------------------------
+# Remove corrupted data adult not true/false
 
 # ------------------------------------------------------------
 # STEP 4: CONVERT NUMERIC + DATE TYPES
