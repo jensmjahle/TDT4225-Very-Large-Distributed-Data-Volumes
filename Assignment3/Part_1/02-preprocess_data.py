@@ -50,26 +50,26 @@ print(f"Loaded ratings: {ratings.shape}")
 # ------------------------------------------------------------
 print("\n===== STEP 2: REMOVE FULL DUPLICATES =====")
 
-before = len(movies)
-movies = movies.drop_duplicates(keep="first")
-print(f"movies: removed {before - len(movies)} duplicates")
 
-before = len(credits)
-credits = credits.drop_duplicates(keep="first")
-print(f"credits: removed {before - len(credits)} duplicates")
+def drop_duplicates_keep_latest(df, keys, name):
+    before = len(df)
 
-before = len(keywords)
-keywords = keywords.drop_duplicates(keep="first")
-print(f"keywords: removed {before - len(keywords)} duplicates")
+    # Drop exact (fully identical) duplicates first
+    df = df.drop_duplicates(keep="last")
 
-before = len(links)
-links = links.drop_duplicates(keep="first")
-print(f"links: removed {before - len(links)} duplicates")
+    # Then drop duplicates based on the key columns (keep last = most recent)
+    df = df.drop_duplicates(subset=keys, keep="last")
 
-before = len(ratings)
-ratings = ratings.drop_duplicates(keep="first")
-print(f"ratings: removed {before - len(ratings)} duplicates")
+    removed = before - len(df)
+    print(f"{name}: removed {removed} duplicates (kept most recent per {keys})")
+    return df
 
+
+movies = drop_duplicates_keep_latest(movies, ["id"], "Movies Metadata")
+credits = drop_duplicates_keep_latest(credits, ["id"], "Credits")
+keywords = drop_duplicates_keep_latest(keywords, ["id"], "Keywords")
+links = drop_duplicates_keep_latest(links, ["movieId"], "Links")
+ratings = drop_duplicates_keep_latest(ratings, ["movieId", "userId"], "Ratings")
 
 # ------------------------------------------------------------
 # STEP 3: NORMALIZE IDS
