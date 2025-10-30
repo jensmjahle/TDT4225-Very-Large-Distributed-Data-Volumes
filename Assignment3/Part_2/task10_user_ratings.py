@@ -17,46 +17,46 @@ class Task10:
             }},
             {"$unwind": "$movie"},
 
-            # 2️⃣ Extract genres per rating
+            # 2️⃣ Extract each rating's genre (unwind movie.genres)
             {"$unwind": "$movie.genres"},
             {"$project": {
-                "user_id": 1,
+                "userId": 1,
                 "rating": 1,
                 "genre": "$movie.genres.name"
             }},
 
             # 3️⃣ Group by user to compute stats
             {"$group": {
-                "_id": "$user_id",
+                "_id": "$userId",
                 "ratings_count": {"$sum": 1},
                 "ratings": {"$push": "$rating"},
                 "genres": {"$addToSet": "$genre"},
                 "stddev": {"$stdDevPop": "$rating"}
             }},
 
-            # 4️⃣ Compute variance = stddev² and genre count
+            # 4️⃣ Compute variance and genre_count
             {"$addFields": {
                 "variance": {"$pow": ["$stddev", 2]},
                 "genre_count": {"$size": "$genres"}
             }},
 
-            # 5️⃣ Filter only users with ≥20 ratings
+            # 5️⃣ Keep only users with ≥20 ratings
             {"$match": {"ratings_count": {"$gte": 20}}},
 
-            # 6️⃣ Output only relevant fields
+            # 6️⃣ Clean projection
             {"$project": {
                 "_id": 0,
                 "user_id": "$_id",
                 "ratings_count": 1,
-                "variance": {"$round": ["$variance", 3]},
-                "genre_count": 1
+                "genre_count": 1,
+                "variance": {"$round": ["$variance", 3]}
             }}
         ]
 
-        # Run base aggregation
+        # Run aggregation
         base = list(self.db.ratings.aggregate(pipeline))
 
-        # Split into two sorted views
+        # Split views
         top_genre = sorted(base, key=lambda x: x["genre_count"], reverse=True)[:10]
         top_var = sorted(base, key=lambda x: x["variance"], reverse=True)[:10]
 
