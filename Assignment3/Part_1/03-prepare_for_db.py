@@ -1,6 +1,5 @@
 # ------------------------------------------------------------
 # Prepare merged Movies dataset for MongoDB insertion
-# (with ratings as a separate collection)
 # ------------------------------------------------------------
 import pandas as pd
 import json
