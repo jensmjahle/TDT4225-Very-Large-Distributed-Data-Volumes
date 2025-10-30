@@ -1,5 +1,5 @@
 # ------------------------------------------------------------
-# TASK 2: Actor pairs with ≥3 co-appearances
+# TASK 2: Actor pairs with ≥3 co-appearances (optimized)
 # ------------------------------------------------------------
 from print_helper import print_table
 
@@ -11,53 +11,54 @@ class Task2:
         print("\n--- TASK 2: Actor Pairs with ≥3 Co-Appearances ---")
 
         pipeline = [
-            # 1️⃣ unwind cast
-            {"$unwind": "$cast"},
-            {"$project": {
-                "movie_id": 1,
-                "vote_average": 1,
-                "actor": "$cast.name"
-            }},
-            # 2️⃣ self join on same movie to form all actor pairs (A,B)
-            {"$lookup": {
-                "from": "movies",
-                "localField": "movie_id",
-                "foreignField": "movie_id",
-                "as": "movie"
-            }},
-            {"$unwind": "$movie"},
-            {"$unwind": "$movie.cast"},
-            {"$project": {
-                "actor1": "$actor",
-                "actor2": "$movie.cast.name",
-                "vote_average": "$vote_average"
-            }},
-            # 3️⃣ remove self-pairs (A==B)
-            {"$match": {"$expr": {"$ne": ["$actor1", "$actor2"]}}},
-            # 4️⃣ normalize pair order so (A,B) == (B,A)
-            {"$addFields": {
-                "pair": {
-                    "$cond": [
-                        {"$lt": ["$actor1", "$actor2"]},
-                        ["$actor1", "$actor2"],
-                        ["$actor2", "$actor1"]
-                    ]
+            # 1️⃣ Only keep movies with valid cast and vote_average
+            {"$match": {"cast": {"$exists": True, "$ne": []}}},
+            # 2️⃣ Generate all unique actor pairs inside each movie
+            {
+                "$project": {
+                    "vote_average": 1,
+                    "pairs": {
+                        "$function": {
+                            "body": """
+                                function(cast) {
+                                    if (!Array.isArray(cast)) return [];
+                                    const names = cast.map(c => c.name).filter(Boolean);
+                                    const pairs = [];
+                                    for (let i = 0; i < names.length; i++) {
+                                        for (let j = i + 1; j < names.length; j++) {
+                                            const a = names[i];
+                                            const b = names[j];
+                                            if (a && b) pairs.push([a, b]);
+                                        }
+                                    }
+                                    return pairs;
+                                }
+                            """,
+                            "args": ["$cast"],
+                            "lang": "js",
+                        }
+                    },
                 }
-            }},
-            # 5️⃣ group by normalized pair
-            {"$group": {
-                "_id": "$pair",
-                "co_appearances": {"$sum": 1},
-                "avg_vote": {"$avg": "$vote_average"}
-            }},
-            # 6️⃣ keep only pairs appearing in ≥3 movies
+            },
+            # 3️⃣ Unwind the generated actor pairs
+            {"$unwind": "$pairs"},
+            # 4️⃣ Group by pair and compute stats
+            {
+                "$group": {
+                    "_id": "$pairs",
+                    "co_appearances": {"$sum": 1},
+                    "avg_vote": {"$avg": "$vote_average"},
+                }
+            },
+            # 5️⃣ Keep only pairs with ≥3 shared movies
             {"$match": {"co_appearances": {"$gte": 3}}},
-            # 7️⃣ sort descending by number of co-appearances
+            # 6️⃣ Sort
             {"$sort": {"co_appearances": -1, "_id": 1}},
-            {"$limit": 20}
+            {"$limit": 20},
         ]
 
         results = list(self.db.movies.aggregate(pipeline))
+
         for r in results:
             r["actor1"], r["actor2"] = r["_id"]
             del r["_id"]
