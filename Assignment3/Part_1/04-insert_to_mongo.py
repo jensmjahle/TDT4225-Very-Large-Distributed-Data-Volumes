@@ -1,41 +1,58 @@
 # ------------------------------------------------------------
-# Insert embedded Movies dataset into MongoDB
+# Insert Movies and Ratings datasets into MongoDB
 # ------------------------------------------------------------
-import os
 import json
 from pathlib import Path
 from DbConnector import DbConnector
 
-DATA_FILE = Path("../movies_prepared/movies_prepared.json")
-COLLECTION_NAME = "movies"
+DATA_DIR = Path("../movies_prepared")
+MOVIES_FILE = DATA_DIR / "movies_prepared.json"
+RATINGS_FILE = DATA_DIR / "ratings_prepared.json"
 
 print("\n===== STEP 1: CONNECTING TO MONGODB =====")
 connection = DbConnector()
 db = connection.db
 
-print("\n===== STEP 2: READING MERGED JSON =====")
-records = []
-with open(DATA_FILE, "r", encoding="utf-8") as f:
+# ------------------------------------------------------------
+# Insert Movies
+# ------------------------------------------------------------
+print("\n===== STEP 2: INSERTING MOVIES =====")
+movies = []
+with open(MOVIES_FILE, "r", encoding="utf-8") as f:
     for line in f:
-        records.append(json.loads(line))
-print(f"Loaded {len(records):,} documents from {DATA_FILE}")
+        movies.append(json.loads(line))
+print(f"Loaded {len(movies):,} movie documents")
 
-print("\n===== STEP 3: CREATING COLLECTION =====")
-if COLLECTION_NAME in db.list_collection_names():
-    db[COLLECTION_NAME].drop()
-    print(f"Dropped existing '{COLLECTION_NAME}' collection")
-db.create_collection(COLLECTION_NAME)
-print(f"Created collection '{COLLECTION_NAME}'")
+if "movies" in db.list_collection_names():
+    db["movies"].drop()
+    print("Dropped existing 'movies' collection")
+db.create_collection("movies")
+db["movies"].insert_many(movies)
+print(f"Inserted {len(movies):,} movies")
 
-print("\n===== STEP 4: INSERTING INTO MONGODB =====")
-BATCH_SIZE = 1000
-for i in range(0, len(records), BATCH_SIZE):
-    batch = records[i:i+BATCH_SIZE]
-    db[COLLECTION_NAME].insert_many(batch)
-    print(f"Inserted {min(i+BATCH_SIZE, len(records))}/{len(records)}")
+# ------------------------------------------------------------
+# Insert Ratings
+# ------------------------------------------------------------
+print("\n===== STEP 3: INSERTING RATINGS =====")
+ratings = []
+with open(RATINGS_FILE, "r", encoding="utf-8") as f:
+    for line in f:
+        ratings.append(json.loads(line))
+print(f"Loaded {len(ratings):,} ratings")
 
-print("\n===== STEP 5: VERIFY COUNT =====")
-print(f"{COLLECTION_NAME}: {db[COLLECTION_NAME].count_documents({}):,} documents")
+if "ratings" in db.list_collection_names():
+    db["ratings"].drop()
+    print("Dropped existing 'ratings' collection")
+db.create_collection("ratings")
+BATCH_SIZE = 10000
+for i in range(0, len(ratings), BATCH_SIZE):
+    batch = ratings[i:i + BATCH_SIZE]
+    db["ratings"].insert_many(batch)
+    print(f"Inserted {min(i + BATCH_SIZE, len(ratings))}/{len(ratings)}")
+
+print("\n===== STEP 4: VERIFYING COUNTS =====")
+print(f"movies:  {db['movies'].count_documents({}):,}")
+print(f"ratings: {db['ratings'].count_documents({}):,}")
 
 connection.close_connection()
 print("\n=== INSERTION COMPLETED SUCCESSFULLY ===")

@@ -1,5 +1,6 @@
 # ------------------------------------------------------------
-# Prepare merged, nested Movies dataset for MongoDB insertion
+# Prepare merged Movies dataset for MongoDB insertion
+# (with ratings as a separate collection)
 # ------------------------------------------------------------
 import pandas as pd
 import json
@@ -7,7 +8,8 @@ import os
 from pathlib import Path
 
 DATA_DIR = Path("../movies_clean")
-OUT_FILE = Path("../movies_prepared/movies_prepared.json")
+OUT_MOVIES = Path("../movies_prepared/movies_prepared.json")
+OUT_RATINGS = Path("../movies_prepared/ratings_prepared.json")
 
 print("\n===== STEP 1: LOADING CLEANED DATA =====")
 
@@ -23,10 +25,31 @@ print(f"keywords:{keywords.shape}")
 print(f"links:   {links.shape}")
 print(f"ratings: {ratings.shape}")
 
+# --- STEP 1.5: FILTER TO SMALL SUBSET (present in links_small/ratings_small) ---
+ids_links   = set(links["movie_id"].dropna().astype("Int64"))
+ids_ratings = set(ratings["movie_id"].dropna().astype("Int64"))
+
+# keep any movie that appears in links or ratings (union)
+keep_ids = ids_links | ids_ratings
+
+bm = len(movies)
+bc = len(credits)
+bk = len(keywords)
+
+movies   = movies[movies["id"].isin(keep_ids)].copy()
+credits  = credits[credits["movie_id"].isin(keep_ids)].copy()
+keywords = keywords[keywords["movie_id"].isin(keep_ids)].copy()
+
+print(f"Filtered movies by links/ratings: {bm} -> {len(movies)}")
+print(f"Filtered credits by links/ratings: {bc} -> {len(credits)}")
+print(f"Filtered keywords by links/ratings: {bk} -> {len(keywords)}")
+
+
+
 # ------------------------------------------------------------
-# STEP 2: BUILD ONE DOCUMENT PER MOVIE
+# STEP 2: BUILD ONE DOCUMENT PER MOVIE (no ratings)
 # ------------------------------------------------------------
-print("\n===== STEP 2: BUILDING EMBEDDED MOVIE DOCUMENTS =====")
+print("\n===== STEP 2: BUILDING MOVIE DOCUMENTS =====")
 
 def safe_json(v):
     if pd.isna(v) or v == "":
@@ -65,8 +88,7 @@ for _, m in movies.iterrows():
         "cast": [],
         "crew": [],
         "keywords": [],
-        "links": {},
-        "ratings": []
+        "links": {}
     }
 
     # attach credits
@@ -85,22 +107,30 @@ for _, m in movies.iterrows():
     if not subl.empty:
         doc["links"] = subl.iloc[0].to_dict()
 
-    # attach ratings (many rows)
-    subr = ratings.loc[ratings["movie_id"] == mid]
-    if not subr.empty:
-        doc["ratings"] = subr.to_dict(orient="records")
-
     docs.append(doc)
 
-print(f"Built {len(docs)} movie documents with nested sub-structures.")
+print(f"Built {len(docs)} movie documents.")
 
 # ------------------------------------------------------------
-# STEP 3: SAVE AS JSON (one line per document)
+# STEP 3: SAVE MOVIES JSON
 # ------------------------------------------------------------
-os.makedirs(OUT_FILE.parent, exist_ok=True)
-with open(OUT_FILE, "w", encoding="utf-8") as f:
+print("\n===== STEP 3: SAVING MOVIES JSON =====")
+os.makedirs(OUT_MOVIES.parent, exist_ok=True)
+with open(OUT_MOVIES, "w", encoding="utf-8") as f:
     for d in docs:
         f.write(json.dumps(d, ensure_ascii=False) + "\n")
+print("Saved movie documents.")
 
-print(f"\nSaved merged dataset to: {OUT_FILE}")
+# ------------------------------------------------------------
+# STEP 4: SAVE RATINGS JSON
+# ------------------------------------------------------------
+print("\n===== STEP 4: SAVING RATINGS JSON =====")
+ratings_docs = ratings.to_dict(orient="records")
+with open(OUT_RATINGS, "w", encoding="utf-8") as f:
+    for r in ratings_docs:
+        f.write(json.dumps(r, ensure_ascii=False) + "\n")
+print("Saved ratings documents.")
+
+print(f"\nSaved movies to:  {OUT_MOVIES}")
+print(f"Saved ratings to: {OUT_RATINGS}")
 print("=== PREPARATION COMPLETED SUCCESSFULLY ===")
