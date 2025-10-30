@@ -46,9 +46,9 @@ print(f"Loaded links:   {links.shape}")
 print(f"Loaded ratings: {ratings.shape}")
 
 # ------------------------------------------------------------
-# STEP 2: REMOVE FULL DUPLICATES (every column is identical)
+# STEP 2: REMOVE DUPLICATES AND FIX BROKEN ROWS
 # ------------------------------------------------------------
-print("\n===== STEP 2: REMOVE FULL DUPLICATES =====")
+print("\n===== STEP 2: REMOVE DUPLICATES AND FIX BROKEN ROWS =====")
 
 
 def drop_duplicates_keep_latest(df, keys, name):
@@ -70,6 +70,39 @@ credits = drop_duplicates_keep_latest(credits, ["id"], "Credits")
 keywords = drop_duplicates_keep_latest(keywords, ["id"], "Keywords")
 links = drop_duplicates_keep_latest(links, ["movieId"], "Links")
 ratings = drop_duplicates_keep_latest(ratings, ["movieId", "userId"], "Ratings")
+
+
+
+def fix_broken_rows(df):
+    valid_adults = {"True", "False"}
+    broken_idx = df[~df["adult"].isin(valid_adults)].index
+
+    repaired_rows = []
+    for idx in broken_idx:
+        if idx - 1 in df.index:
+            prev_row = df.loc[idx - 1].copy()
+            curr_row = df.loc[idx].copy()
+
+            prev_row["overview"] = (
+                str(prev_row.get("overview", "")).strip() + " " + str(curr_row["adult"]).strip()
+            ).strip()
+
+            for col in df.columns:
+                if pd.isna(prev_row[col]) or prev_row[col] == "":
+                    prev_row[col] = curr_row[col]
+
+            repaired_rows.append((idx - 1, prev_row))
+
+    for idx, new_row in repaired_rows:
+        df.loc[idx] = new_row
+
+    df = df.drop(broken_idx).reset_index(drop=True)
+    print(f"Fixed {len(broken_idx)} broken lines (merged into previous rows)")
+    return df
+
+
+movies = fix_broken_rows(movies)
+
 
 # ------------------------------------------------------------
 # STEP 3: NORMALIZE IDS
