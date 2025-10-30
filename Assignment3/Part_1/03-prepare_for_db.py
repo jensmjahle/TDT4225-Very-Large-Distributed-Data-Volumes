@@ -69,7 +69,7 @@ docs = []
 for _, m in movies.iterrows():
     mid = int(m["id"])
     doc = {
-        "movie_id": mid,
+        "_id": mid,
         "title": m.get("title"),
         "overview": m.get("overview"),
         "budget": m.get("budget"),

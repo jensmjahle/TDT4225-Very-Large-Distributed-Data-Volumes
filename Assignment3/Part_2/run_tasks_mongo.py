@@ -12,6 +12,7 @@ sys.path.append(str(PARENT_DIR))
 
 from DbConnector import DbConnector
 from task1_directors import Task1
+from task2_actor_pairs import Task2
 
 
 class MongoTaskRunner:
@@ -25,7 +26,8 @@ class MongoTaskRunner:
         print("Running task 1")
         Task1(self.db).run()
         print("Task 1 completed")
-        #Task2(self.db).run()
+        print("Running task 2")
+        Task2(self.db).run()
 
         print("\n=== All MongoDB tasks executed successfully ===")
 
