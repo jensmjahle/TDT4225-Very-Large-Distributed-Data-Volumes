@@ -18,6 +18,9 @@ from task4_collections_revenue import Task4
 from task5_decade_genre_runtime import Task5
 from task6_female_proportion import Task6
 from task7_top_vote_average import Task7
+from task8_director_actor_collaboration import Task8
+from task9_non_english_with_us_involved import Task9
+from task10_user_ratings import Task10
 
 
 class MongoTaskRunner:
@@ -35,6 +38,9 @@ class MongoTaskRunner:
         Task5(self.db).run()
         Task6(self.db).run()
         Task7(self.db).run()
+        Task8(self.db).run()
+        Task9(self.db).run()
+        Task10(self.db).run()
 
 
         print("\n=== All MongoDB tasks executed successfully ===")
