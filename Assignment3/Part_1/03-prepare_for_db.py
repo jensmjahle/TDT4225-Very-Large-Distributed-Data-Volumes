@@ -39,8 +39,10 @@ if "release_date" in movies.columns:
     movies["release_date"] = pd.to_datetime(movies["release_date"], errors="coerce")
     movies["release_date_str"] = movies["release_date"].dt.strftime("%Y-%m-%d")
 
+
 # No filtering — keep all movies, credits, and keywords.
 # Just ensure link mappings are valid and consistent.
+
 
 # Drop rows in links with missing TMDb IDs
 before_links = len(links)
@@ -55,7 +57,6 @@ print(f"Ratings: removed {before_ratings - len(ratings)} rows with missing Movie
 print(f"Movies retained: {len(movies)}")
 print(f"Credits retained: {len(credits)}")
 print(f"Keywords retained: {len(keywords)}")
-
 
 # ------------------------------------------------------------
 # STEP 2: BUILD ONE DOCUMENT PER MOVIE (no ratings)
