@@ -1,6 +1,5 @@
 # ------------------------------------------------------------
 # Prepare merged Movies dataset for MongoDB insertion
-# (with ratings as a separate collection)
 # ------------------------------------------------------------
 import pandas as pd
 import json
@@ -80,6 +79,7 @@ for _, m in movies.iterrows():
         "vote_average": m.get("vote_average"),
         "vote_count": m.get("vote_count"),
         "popularity": m.get("popularity"),
+        "original_language": m.get("original_language"),
         "genres": safe_json(m.get("genres")),
         "production_companies": safe_json(m.get("production_companies")),
         "production_countries": safe_json(m.get("production_countries")),
