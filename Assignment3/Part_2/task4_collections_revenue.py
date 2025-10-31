@@ -11,11 +11,11 @@ class Task4:
         print("\n--- TASK 4: Top 10 Film Collections by Total Revenue ---")
 
         pipeline = [
-            # 1️⃣ Only collections that exist and have a name
+            # Only collections that exist and have a name
             {"$match": {
                 "belongs_to_collection.name": {"$exists": True, "$ne": None}
             }},
-            # 2️⃣ Group by collection name
+            # Group by collection name
             {"$group": {
                 "_id": "$belongs_to_collection.name",
                 "movie_count": {"$sum": 1},
@@ -24,7 +24,7 @@ class Task4:
                 "earliest_release_date": {"$min": "$release_date"},
                 "latest_release_date": {"$max": "$release_date"}
             }},
-            # 3️⃣ Calculate median vote_average
+            #  Calculate median vote_average
             {"$addFields": {
                 "sorted_votes": {"$sortArray": {"input": "$vote_list", "sortBy": 1}},
                 "mid_index": {"$floor": {"$divide": [{"$size": "$vote_list"}, 2]}}
@@ -43,7 +43,7 @@ class Task4:
                     ]
                 }
             }},
-            # 4️⃣ Keep only needed fields
+            # Keep only needed fields
             {"$project": {
                 "_id": 0,
                 "collection_name": "$_id",
@@ -53,9 +53,9 @@ class Task4:
                 "earliest_release_date": 1,
                 "latest_release_date": 1
             }},
-            # 5️⃣ Filter: collections with ≥3 movies
+            # Filter: collections with ≥3 movies
             {"$match": {"movie_count": {"$gte": 3}}},
-            # 6️⃣ Sort by total_revenue desc
+            # Sort by total_revenue desc
             {"$sort": {"total_revenue": -1}},
             {"$limit": 10}
         ]

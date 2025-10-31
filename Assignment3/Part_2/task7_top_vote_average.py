@@ -8,19 +8,28 @@ class Task7:
         print("\n--- TASK 7: Top 20 'Noir' or 'Neo-Noir' Movies ---")
 
         pipeline = [
-            # Text search over overview & tagline
             {"$match": {
                 "$text": {"$search": "noir OR neo-noir"},
                 "vote_count": {"$gte": 50}
             }},
 
-            # Sort by vote_average descending
+            {"$addFields": {
+                "release_dt": {
+                    "$dateFromString": {
+                        "dateString": "$release_date",
+                        "onError": None,
+                        "onNull": None
+                    }
+                }
+            }},
+            {"$addFields": {
+                "year": {"$year": "$release_dt"}
+            }},
+
             {"$sort": {"vote_average": -1, "vote_count": -1}},
 
-            # Return the 20 best results
             {"$limit": 20},
 
-            # Only keep required fields
             {"$project": {
                 "_id": 0,
                 "title": 1,

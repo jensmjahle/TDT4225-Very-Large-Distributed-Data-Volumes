@@ -8,16 +8,14 @@ class Task10:
         print("\n--- TASK 10: User Rating Stats ---")
 
         pipeline = [
-            # 1️⃣ Join ratings → movies to get genres
             {"$lookup": {
                 "from": "movies",
-                "localField": "movie_id",
+                "localField": "tmdb_id",
                 "foreignField": "_id",
                 "as": "movie"
             }},
             {"$unwind": "$movie"},
 
-            # 2️⃣ Extract each rating's genre (unwind movie.genres)
             {"$unwind": "$movie.genres"},
             {"$project": {
                 "userId": 1,
@@ -25,7 +23,6 @@ class Task10:
                 "genre": "$movie.genres.name"
             }},
 
-            # 3️⃣ Group by user to compute stats
             {"$group": {
                 "_id": "$userId",
                 "ratings_count": {"$sum": 1},
@@ -34,16 +31,13 @@ class Task10:
                 "stddev": {"$stdDevPop": "$rating"}
             }},
 
-            # 4️⃣ Compute variance and genre_count
             {"$addFields": {
                 "variance": {"$pow": ["$stddev", 2]},
                 "genre_count": {"$size": "$genres"}
             }},
 
-            # 5️⃣ Keep only users with ≥20 ratings
             {"$match": {"ratings_count": {"$gte": 20}}},
 
-            # 6️⃣ Clean projection
             {"$project": {
                 "_id": 0,
                 "user_id": "$_id",
@@ -53,10 +47,8 @@ class Task10:
             }}
         ]
 
-        # Run aggregation
         base = list(self.db.ratings.aggregate(pipeline))
 
-        # Split views
         top_genre = sorted(base, key=lambda x: x["genre_count"], reverse=True)[:10]
         top_var = sorted(base, key=lambda x: x["variance"], reverse=True)[:10]
 

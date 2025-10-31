@@ -11,25 +11,38 @@ class Task5:
         print("\n--- TASK 5: Median Runtime by Decade and Primary Genre ---")
 
         pipeline = [
-            # 1️⃣ Valid fields only
+            # Derive year from release_date (string → date)
+            {"$addFields": {
+                "release_dt": {
+                    "$dateFromString": {
+                        "dateString": "$release_date",
+                        "onError": None,
+                        "onNull": None
+                    }
+                }
+            }},
+            {"$addFields": {
+                "year": {"$year": "$release_dt"}
+            }},
+            # Valid fields only
             {"$match": {
                 "year": {"$ne": None},
                 "runtime": {"$ne": None, "$gt": 0},
                 "genres": {"$exists": True, "$ne": []}
             }},
-            # 2️⃣ Compute decade and primary genre
+            # Compute decade and primary genre
             {"$project": {
                 "decade": {"$multiply": [{"$floor": {"$divide": ["$year", 10]}}, 10]},
                 "primary_genre": {"$arrayElemAt": ["$genres.name", 0]},
                 "runtime": 1
             }},
-            # 3️⃣ Group by decade + primary_genre
+            # Group by decade + primary_genre
             {"$group": {
                 "_id": {"decade": "$decade", "genre": "$primary_genre"},
                 "runtimes": {"$push": "$runtime"},
                 "movie_count": {"$sum": 1}
             }},
-            # 4️⃣ Compute median runtime
+            # Compute median runtime
             {"$addFields": {
                 "sorted_runtimes": {"$sortArray": {"input": "$runtimes", "sortBy": 1}},
                 "mid_index": {"$floor": {"$divide": [{"$size": "$runtimes"}, 2]}}
@@ -48,7 +61,7 @@ class Task5:
                     ]
                 }
             }},
-            # 5️⃣ Project clean result
+            # Project clean result
             {"$project": {
                 "_id": 0,
                 "decade": "$_id.decade",
@@ -56,7 +69,7 @@ class Task5:
                 "movie_count": 1,
                 "median_runtime": 1
             }},
-            # 6️⃣ Sort by decade, then median_runtime desc
+            # Sort by decade, then median_runtime desc
             {"$sort": {"decade": 1, "median_runtime": -1}}
         ]
 
