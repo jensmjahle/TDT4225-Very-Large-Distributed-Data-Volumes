@@ -24,25 +24,37 @@ print(f"keywords:{keywords.shape}")
 print(f"links:   {links.shape}")
 print(f"ratings: {ratings.shape}")
 
-# --- STEP 1.5: FILTER TO SMALL SUBSET (present in links_small/ratings_small) ---
-ids_links   = set(links["movie_id"].dropna().astype("Int64"))
-ids_ratings = set(ratings["movie_id"].dropna().astype("Int64"))
+# ------------------------------------------------------------
+# STEP 1.5: CLEAN AND ALIGN IDS (no filtering)
+# ------------------------------------------------------------
+print("\n===== STEP 1.5: CLEAN AND ALIGN IDS =====")
 
-# keep any movie that appears in links or ratings (union)
-keep_ids = ids_links | ids_ratings
+# Ensure consistent numeric types
+links["tmdb_id"] = pd.to_numeric(links["tmdb_id"], errors="coerce").astype("Int64")
+links["movie_lens_id"] = pd.to_numeric(links["movie_lens_id"], errors="coerce").astype("Int64")
+ratings["movie_lens_id"] = pd.to_numeric(ratings["movie_lens_id"], errors="coerce").astype("Int64")
 
-bm = len(movies)
-bc = len(credits)
-bk = len(keywords)
+# Convert release_date to clean string for MongoDB
+if "release_date" in movies.columns:
+    movies["release_date"] = pd.to_datetime(movies["release_date"], errors="coerce")
+    movies["release_date_str"] = movies["release_date"].dt.strftime("%Y-%m-%d")
 
-movies   = movies[movies["id"].isin(keep_ids)].copy()
-credits  = credits[credits["movie_id"].isin(keep_ids)].copy()
-keywords = keywords[keywords["movie_id"].isin(keep_ids)].copy()
+# No filtering — keep all movies, credits, and keywords.
+# Just ensure link mappings are valid and consistent.
 
-print(f"Filtered movies by links/ratings: {bm} -> {len(movies)}")
-print(f"Filtered credits by links/ratings: {bc} -> {len(credits)}")
-print(f"Filtered keywords by links/ratings: {bk} -> {len(keywords)}")
+# Drop rows in links with missing TMDb IDs
+before_links = len(links)
+links = links.dropna(subset=["tmdb_id"])
+print(f"Links: removed {before_links - len(links)} rows with missing TMDb IDs")
 
+# Drop invalid or missing ratings (if any)
+before_ratings = len(ratings)
+ratings = ratings.dropna(subset=["movie_lens_id"])
+print(f"Ratings: removed {before_ratings - len(ratings)} rows with missing MovieLens IDs")
+
+print(f"Movies retained: {len(movies)}")
+print(f"Credits retained: {len(credits)}")
+print(f"Keywords retained: {len(keywords)}")
 
 
 # ------------------------------------------------------------
@@ -66,16 +78,15 @@ def safe_json(v):
 
 docs = []
 for _, m in movies.iterrows():
-    mid = int(m["id"])
+    tmdb_id = int(m["id"])
     doc = {
-        "_id": mid,
+        "_id": tmdb_id,
         "title": m.get("title"),
         "overview": m.get("overview"),
         "budget": m.get("budget"),
         "revenue": m.get("revenue"),
         "runtime": m.get("runtime"),
-        "release_date": m.get("release_date"),
-        "year": int(m.get("year")) if not pd.isna(m.get("year")) else None,
+        "release_date": m.get("release_date_str"),
         "vote_average": m.get("vote_average"),
         "vote_count": m.get("vote_count"),
         "popularity": m.get("popularity"),
@@ -91,30 +102,58 @@ for _, m in movies.iterrows():
         "links": {}
     }
 
-    # attach credits
-    subc = credits.loc[credits["movie_id"] == mid]
+    # Attach credits
+    subc = credits.loc[credits["movie_id"] == tmdb_id]
     if not subc.empty:
         doc["cast"] = safe_json(subc.iloc[0].get("cast"))
         doc["crew"] = safe_json(subc.iloc[0].get("crew"))
 
-    # attach keywords
-    subk = keywords.loc[keywords["movie_id"] == mid]
+    # Attach keywords
+    subk = keywords.loc[keywords["movie_id"] == tmdb_id]
     if not subk.empty:
         doc["keywords"] = safe_json(subk.iloc[0].get("keywords"))
 
-    # attach links
-    subl = links.loc[links["movie_id"] == mid]
+    # Attach links (match on tmdb_id)
+    subl = links.loc[links["tmdb_id"] == tmdb_id]
     if not subl.empty:
-        doc["links"] = subl.iloc[0].to_dict()
+        doc["links"] = {
+            "movie_lens_id": int(subl.iloc[0].get("movie_lens_id")),
+            "imdb_id": subl.iloc[0].get("imdb_id"),
+            "tmdb_id": int(subl.iloc[0].get("tmdb_id")),
+        }
 
     docs.append(doc)
 
 print(f"Built {len(docs)} movie documents.")
 
 # ------------------------------------------------------------
-# STEP 3: SAVE MOVIES JSON
+# STEP 3: JOIN RATINGS WITH LINKS (add tmdb_id + imdb_id)
 # ------------------------------------------------------------
-print("\n===== STEP 3: SAVING MOVIES JSON =====")
+print("\n===== STEP 3: JOINING RATINGS WITH LINKS =====")
+
+ratings = ratings.merge(
+    links[["movie_lens_id", "imdb_id", "tmdb_id"]],
+    on="movie_lens_id",
+    how="left"
+)
+
+# Convert timestamp in ratings to consistent string format
+if "timestamp" in ratings.columns:
+    ratings["timestamp"] = pd.to_datetime(ratings["timestamp"], errors="coerce")
+
+    ratings["timestamp"] = ratings["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+# Drop rows where we couldn't find a matching link
+before = len(ratings)
+ratings = ratings.dropna(subset=["tmdb_id"])
+after = len(ratings)
+print(f"Ratings joined with links: {before} -> {after}")
+
+# ------------------------------------------------------------
+# STEP 4: SAVE MOVIES JSON
+# ------------------------------------------------------------
+print("\n===== STEP 4: SAVING MOVIES JSON =====")
 os.makedirs(OUT_MOVIES.parent, exist_ok=True)
 with open(OUT_MOVIES, "w", encoding="utf-8") as f:
     for d in docs:
@@ -122,9 +161,9 @@ with open(OUT_MOVIES, "w", encoding="utf-8") as f:
 print("Saved movie documents.")
 
 # ------------------------------------------------------------
-# STEP 4: SAVE RATINGS JSON
+# STEP 5: SAVE RATINGS JSON
 # ------------------------------------------------------------
-print("\n===== STEP 4: SAVING RATINGS JSON =====")
+print("\n===== STEP 5: SAVING RATINGS JSON =====")
 ratings_docs = ratings.to_dict(orient="records")
 with open(OUT_RATINGS, "w", encoding="utf-8") as f:
     for r in ratings_docs:
