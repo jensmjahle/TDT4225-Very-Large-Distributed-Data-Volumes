@@ -30,6 +30,14 @@ db.create_collection("movies")
 db["movies"].insert_many(movies)
 print(f"Inserted {len(movies):,} movies")
 
+print("Creating text index on 'overview' and 'tagline' ...")
+db["movies"].create_index([
+    ("overview", "text"),
+    ("tagline", "text"),
+    ("keywords.name", "text")
+])
+
+
 # ------------------------------------------------------------
 # Insert Ratings
 # ------------------------------------------------------------
