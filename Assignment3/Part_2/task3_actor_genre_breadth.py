@@ -11,19 +11,19 @@ class Task3:
         print("\n--- TASK 3: Actors with Widest Genre Breadth ---")
 
         pipeline = [
-            # 1️⃣ Only keep movies that have both cast and genres
+            #  Only keep movies that have both cast and genres
             {"$match": {"cast": {"$exists": True, "$ne": []},
                         "genres": {"$exists": True, "$ne": []}}},
-            # 2️⃣ Unwind cast and genres
+            #  Unwind cast and genres
             {"$unwind": "$cast"},
             {"$unwind": "$genres"},
-            # 3️⃣ Group by actor name
+            #  Group by actor name
             {"$group": {
                 "_id": "$cast.name",
                 "movie_ids": {"$addToSet": "$_id"},
                 "genres": {"$addToSet": "$genres.name"}
             }},
-            # 4️⃣ Compute counts and slice example genres
+            #  Compute counts and slice example genres
             {"$project": {
                 "actor": "$_id",
                 "_id": 0,
@@ -31,9 +31,9 @@ class Task3:
                 "genre_count": {"$size": "$genres"},
                 "example_genres": {"$slice": ["$genres", 5]}
             }},
-            # 5️⃣ Only actors with ≥10 credited movies
+            #  Only actors with ≥10 credited movies
             {"$match": {"movie_count": {"$gte": 10}}},
-            # 6️⃣ Sort by genre_count, then movie_count, then name
+            #  Sort by genre_count, then movie_count, then name
             {"$sort": {"genre_count": -1, "movie_count": -1, "actor": 1}},
             {"$limit": 10}
         ]

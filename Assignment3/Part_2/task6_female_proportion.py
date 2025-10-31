@@ -11,16 +11,29 @@ class Task6:
         print("\n--- TASK 6: Female Cast Proportion by Decade ---")
 
         pipeline = [
-            # 1️⃣ Keep valid entries
+            # Derive year from release_date
+            {"$addFields": {
+                "release_dt": {
+                    "$dateFromString": {
+                        "dateString": "$release_date",
+                        "onError": None,
+                        "onNull": None
+                    }
+                }
+            }},
+            {"$addFields": {
+                "year": {"$year": "$release_dt"}
+            }},
+            # Keep valid entries
             {"$match": {
                 "year": {"$ne": None},
                 "cast": {"$exists": True, "$ne": []}
             }},
-            # 2️⃣ Compute decade
+            # Compute decade
             {"$addFields": {
                 "decade": {"$multiply": [{"$floor": {"$divide": ["$year", 10]}}, 10]}
             }},
-            # 3️⃣ Keep only top 5 billed cast (order 0–4)
+            # Keep only top 5 billed cast (order 0–4)
             {"$addFields": {
                 "top5_cast": {
                     "$slice": [
@@ -33,7 +46,7 @@ class Task6:
                     ]
                 }
             }},
-            # 4️⃣ Compute per-movie female proportion
+            # Compute per-movie female proportion
             {"$project": {
                 "decade": 1,
                 "female_count": {
@@ -64,13 +77,11 @@ class Task6:
                     ]
                 }
             }},
-            # 5️⃣ Aggregate by decade
             {"$group": {
                 "_id": "$decade",
                 "avg_female_proportion": {"$avg": "$female_prop"},
                 "movie_count": {"$sum": 1}
             }},
-            # 6️⃣ Sort by female proportion desc
             {"$sort": {"avg_female_proportion": -1}}
         ]
 

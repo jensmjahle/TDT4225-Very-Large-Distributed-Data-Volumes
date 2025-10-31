@@ -25,43 +25,38 @@ print(f"links:   {links.shape}")
 print(f"ratings: {ratings.shape}")
 
 # ------------------------------------------------------------
-# STEP 1.5: FILTER TO SMALL SUBSET (based on links/ratings)
+# STEP 1.5: CLEAN AND ALIGN IDS (no filtering)
 # ------------------------------------------------------------
-print("\n===== STEP 1.5: FILTER BY LINKED/AVAILABLE IDS =====")
+print("\n===== STEP 1.5: CLEAN AND ALIGN IDS =====")
 
-# Ensure proper types
+# Ensure consistent numeric types
 links["tmdb_id"] = pd.to_numeric(links["tmdb_id"], errors="coerce").astype("Int64")
 links["movie_lens_id"] = pd.to_numeric(links["movie_lens_id"], errors="coerce").astype("Int64")
 ratings["movie_lens_id"] = pd.to_numeric(ratings["movie_lens_id"], errors="coerce").astype("Int64")
 
-# Convert release_date to string for MongoDB
+# Convert release_date to clean string for MongoDB
 if "release_date" in movies.columns:
-    # Ensure release_date is a datetime first
     movies["release_date"] = pd.to_datetime(movies["release_date"], errors="coerce")
+    movies["release_date_str"] = movies["release_date"].dt.strftime("%Y-%m-%d")
 
-    # Now you can create a formatted string column
-    movies["release_date_str"] = movies["release_date"].dt.strftime("%Y-%m-%d %H:%M:%S")
 
-# Filter links and ratings to shared MovieLens IDs
-valid_lens_ids = set(ratings["movie_lens_id"].dropna().astype("Int64"))
-links = links[links["movie_lens_id"].isin(valid_lens_ids)]
+# No filtering — keep all movies, credits, and keywords.
+# Just ensure link mappings are valid and consistent.
 
-# Determine TMDb IDs to keep (union of all valid IDs)
-ids_links_tmdb = set(links["tmdb_id"].dropna().astype("Int64"))
-ids_from_ratings_tmdb = set(links["tmdb_id"].dropna().astype("Int64"))
-keep_tmdb_ids = ids_links_tmdb | ids_from_ratings_tmdb
 
-bm = len(movies)
-bc = len(credits)
-bk = len(keywords)
+# Drop rows in links with missing TMDb IDs
+before_links = len(links)
+links = links.dropna(subset=["tmdb_id"])
+print(f"Links: removed {before_links - len(links)} rows with missing TMDb IDs")
 
-movies = movies[movies["id"].isin(keep_tmdb_ids)].copy()
-credits = credits[credits["movie_id"].isin(keep_tmdb_ids)].copy()
-keywords = keywords[keywords["movie_id"].isin(keep_tmdb_ids)].copy()
+# Drop invalid or missing ratings (if any)
+before_ratings = len(ratings)
+ratings = ratings.dropna(subset=["movie_lens_id"])
+print(f"Ratings: removed {before_ratings - len(ratings)} rows with missing MovieLens IDs")
 
-print(f"Filtered movies by links/ratings: {bm} -> {len(movies)}")
-print(f"Filtered credits by links/ratings: {bc} -> {len(credits)}")
-print(f"Filtered keywords by links/ratings: {bk} -> {len(keywords)}")
+print(f"Movies retained: {len(movies)}")
+print(f"Credits retained: {len(credits)}")
+print(f"Keywords retained: {len(keywords)}")
 
 # ------------------------------------------------------------
 # STEP 2: BUILD ONE DOCUMENT PER MOVIE (no ratings)
@@ -93,7 +88,6 @@ for _, m in movies.iterrows():
         "revenue": m.get("revenue"),
         "runtime": m.get("runtime"),
         "release_date": m.get("release_date_str"),
-        "year": int(m.get("year")) if not pd.isna(m.get("year")) else None,
         "vote_average": m.get("vote_average"),
         "vote_count": m.get("vote_count"),
         "popularity": m.get("popularity"),

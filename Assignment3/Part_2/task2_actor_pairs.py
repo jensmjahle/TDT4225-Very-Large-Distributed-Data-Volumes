@@ -11,9 +11,9 @@ class Task2:
         print("\n--- TASK 2: Actor Pairs with ≥3 Co-Appearances ---")
 
         pipeline = [
-            # 1️⃣ Only keep movies with valid cast and vote_average
+            #  Only keep movies with valid cast and vote_average
             {"$match": {"cast": {"$exists": True, "$ne": []}}},
-            # 2️⃣ Generate all unique actor pairs inside each movie
+            # Generate all unique actor pairs inside each movie
             {
                 "$project": {
                     "vote_average": 1,
@@ -40,9 +40,9 @@ class Task2:
                     },
                 }
             },
-            # 3️⃣ Unwind the generated actor pairs
+            #  Unwind the generated actor pairs
             {"$unwind": "$pairs"},
-            # 4️⃣ Group by pair and compute stats
+            #  Group by pair and compute stats
             {
                 "$group": {
                     "_id": "$pairs",
@@ -50,9 +50,9 @@ class Task2:
                     "avg_vote": {"$avg": "$vote_average"},
                 }
             },
-            # 5️⃣ Keep only pairs with ≥3 shared movies
+            #  Keep only pairs with ≥3 shared movies
             {"$match": {"co_appearances": {"$gte": 3}}},
-            # 6️⃣ Sort
+            # Sort
             {"$sort": {"co_appearances": -1, "_id": 1}},
             {"$limit": 20},
         ]
